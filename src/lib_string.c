@@ -335,8 +335,18 @@ static const char *match_capture(MatchState *ms, const char *s, int l)
     return NULL;
 }
 
+static int do_nothing(lua_State * L) {
+  return 0;
+}
+
 static const char *match(MatchState *ms, const char *s, const char *p)
 {
+  /* If there is a call hook, trigger it now so that it's possible to
+   * interrupt long-running recursive match operations */
+  if (lua_gethookmask(ms->L) & LUA_MASKCALL) {
+    lua_pushcfunction(ms->L, do_nothing);
+    lua_call(ms->L, 0, 0);
+  }
   if (++ms->depth > LJ_MAX_XLEVEL)
     lj_err_caller(ms->L, LJ_ERR_STRPATX);
   init: /* using goto's to optimize tail recursion */
